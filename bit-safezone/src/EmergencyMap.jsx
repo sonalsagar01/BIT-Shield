@@ -67,7 +67,7 @@ function EmergencyMap({
 
   const [currentLocation, setCurrentLocation] = useState(null);
   const [locationMessage, setLocationMessage] = useState("");
-
+  const [mapView, setMapView] = useState("street");
 
   // ------------------------------------------------
   // Find user's current location
@@ -151,30 +151,54 @@ function EmergencyMap({
 
       <div className="map-card">
 
-        <div className="map-toolbar">
 
-          <div className="map-status">
+<div className="map-toolbar">
 
-            <span className="map-live-dot"></span>
+  <div className="map-status">
+    <span className="map-live-dot"></span>
 
-            <div>
-              <strong>Safety Map Active</strong>
-              <small>
-                Click anywhere on the map to mark an incident
-              </small>
-            </div>
+    <div>
+      <strong>Safety Map Active</strong>
+      <small>
+        Click anywhere on the map to mark an incident
+      </small>
+    </div>
+  </div>
 
-          </div>
+  {/* Map view buttons */}
+  <div className="map-view-toggle">
+
+    <button
+      className={`map-view-button ${
+        mapView === "street" ? "active" : ""
+      }`}
+      onClick={() => setMapView("street")}
+    >
+      🗺️ Street
+    </button>
+
+    <button
+      className={`map-view-button ${
+        mapView === "satellite" ? "active" : ""
+      }`}
+      onClick={() => setMapView("satellite")}
+    >
+      🛰️ Satellite
+    </button>
+
+  </div>
+
+  {/* Existing location button */}
+  <button
+    className="location-button"
+    onClick={findMyLocation}
+  >
+    📍 Find My Location
+  </button>
+
+</div>
 
 
-          <button
-            className="location-button"
-            onClick={findMyLocation}
-          >
-            📍 Find My Location
-          </button>
-
-        </div>
 
 
         {/* --------------------------------------- */}
@@ -194,11 +218,12 @@ function EmergencyMap({
               borderRadius: "20px",
             }}
           >
-
+           {/* 
             <TileLayer
               attribution='&copy; OpenStreetMap contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+            /> */}
+            <TileLayer key={mapView} attribution={ mapView === "satellite" ? '&copy; Esri, Maxar, Earthstar Geographics' : '&copy; OpenStreetMap contributors' } url={ mapView === "satellite" ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" } />
 
 
             <MapClickHandler

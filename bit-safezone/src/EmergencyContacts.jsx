@@ -332,7 +332,8 @@ export default function EmergencyContacts() {
           <p>
             Dedicated phone numbers for the campus healthcare centre,
             main-gate security and women's safety should be verified
-            with BIT Sindri administration before real-world deployment.
+            with BIT Sindri administration.
+             {/* before real-world deployment. */}
           </p>
 
         </div>
@@ -346,16 +347,16 @@ export default function EmergencyContacts() {
 
       <div className="emergency-notice">
 
-        <strong>
+        {/* <strong>
           Important:
-        </strong>
+        </strong> */}
 
-        <p>
+        {/* <p>
           BIT Shield is a hackathon prototype and does not
           automatically dispatch emergency services. In an
           immediate emergency, contact the appropriate verified
           emergency service directly.
-        </p>
+        </p> */}
 
       </div>
 

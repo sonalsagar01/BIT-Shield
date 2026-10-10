@@ -16,9 +16,11 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://192.168.29.242:5173",
     ],
     allow_methods=["GET", "POST", "PATCH"],
-    allow_headers=["Content-Type"],
+    # allow_headers=["Content-Type"],
+    allow_headers=["*"],
 )
 
 
