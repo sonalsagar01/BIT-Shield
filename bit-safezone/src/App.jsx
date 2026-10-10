@@ -5,7 +5,10 @@ import EmergencyMap from "./EmergencyMap";
 import "./App.css";
 
 // const API = "http://127.0.0.1:8000";
-const API = import.meta.env.VITE_API_URL;
+
+// const API = import.meta.env.VITE_API_URL;
+
+const API = "http://192.168.29.242:8000";
 
 const emptyForm = {
   category: "Unsafe Location",
