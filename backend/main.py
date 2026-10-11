@@ -16,10 +16,12 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-       "https://bit-shield-gold.vercel.app/"
+        "https://bit-shield-gold.vercel.app"
     ],
-    allow_methods=["GET", "POST", "PATCH"],
+    # allow_methods=["GET", "POST", "PATCH"],
     # allow_headers=["Content-Type"],
+    allow_credentials=True,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
