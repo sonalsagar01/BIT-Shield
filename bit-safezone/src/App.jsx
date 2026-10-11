@@ -8,7 +8,9 @@ import "./App.css";
 
 // const API = import.meta.env.VITE_API_URL;
 
-const API = "http://192.168.29.242:8000";
+// const API = "http://192.168.29.242:8000";
+
+const API = "http://10.96.30.246:8000";
 
 const emptyForm = {
   category: "Unsafe Location",
