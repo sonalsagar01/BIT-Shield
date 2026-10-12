@@ -4,17 +4,33 @@ import EmergencyContacts from "./EmergencyContacts";
 import EmergencyMap from "./EmergencyMap";
 import "./App.css";
 
-// const API = "http://127.0.0.1:8000";
+const TRUSTED_CONTACT_KEY = "bit-shield-trusted-contact";
+const CAMPUS_SECURITY_NUMBER = "0101010101";
 
-// const API = import.meta.env.VITE_API_URL;
+function sanitizePhoneNumber(value) {
+  return String(value ?? "").replace(/[\s()-]/g, "");
+}
 
+function readTrustedContacts() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(TRUSTED_CONTACT_KEY) || "null");
+    const contacts = Array.isArray(saved) ? saved : saved ? [saved] : [];
 
+    return contacts
+      .slice(0, 3)
+      .filter((contact) => contact && typeof contact.name === "string" && typeof contact.phone === "string")
+      .map((contact) => ({
+        name: contact.name.trim(),
+        phone: sanitizePhoneNumber(contact.phone),
+      }))
+      .filter((contact) => contact.name && /^\+?\d{7,15}$/.test(contact.phone));
+  } catch {
+    return [];
+  }
+}
 
-// const API = "http://10.96.30.246:8000";
-
-// const API = import.meta.env.VITE_API_URL;
-
-const API = "https://bit-shield-1.onrender.com";
+const API = import.meta.env.VITE_API_URL
+  || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "https://bit-shield-1.onrender.com");
 
 const emptyForm = {
   category: "Unsafe Location",
@@ -30,19 +46,76 @@ function App() {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [trustedContacts, setTrustedContacts] = useState(readTrustedContacts);
+  const [trustedContactDrafts, setTrustedContactDrafts] = useState(() => {
+    const saved = readTrustedContacts();
+    return Array.from({ length: 3 }, (_, index) => saved[index] || { name: "", phone: "" });
+  });
+  const [sosActive, setSosActive] = useState(false);
+  const primaryTrustedContact = trustedContacts[0];
+  const sosHref = primaryTrustedContact
+    ? `tel:${primaryTrustedContact.phone}`
+    : `tel:${CAMPUS_SECURITY_NUMBER}`;
+
+  function saveTrustedContact(event) {
+    event.preventDefault();
+    const contacts = [];
+
+    for (const [index, draft] of trustedContactDrafts.entries()) {
+      const name = draft.name.trim();
+      const phone = sanitizePhoneNumber(draft.phone);
+
+      if (!name && !phone) continue;
+      if (!name || !/^\+?\d{7,15}$/.test(phone)) {
+        setMessage(`Complete both fields for trusted contact ${index + 1}, or leave both blank.`);
+        return;
+      }
+      contacts.push({ name, phone });
+    }
+
+    if (!contacts.length) {
+      setMessage("Add at least one trusted contact, or SOS will call Campus Security.");
+      return;
+    }
+
+    try {
+      localStorage.setItem(TRUSTED_CONTACT_KEY, JSON.stringify(contacts));
+      setTrustedContacts(contacts);
+      setMessage(`${contacts.length} trusted contact${contacts.length === 1 ? "" : "s"} saved on this device.`);
+    } catch {
+      setMessage("Could not save the trusted contact in this browser.");
+    }
+  }
 
   async function loadReports() {
     try {
       const response = await fetch(`${API}/reports`);
-      if (!response.ok) throw new Error("Could not load reports");
+      if (!response.ok) throw new Error("Could not load reports.");
       setReports(await response.json());
-    } catch {
-      setMessage("Backend unavailable. Check the backend terminal.");
+    } catch (error) {
+      setMessage(error.message || "Backend unavailable. Check the backend terminal.");
     }
   }
 
   useEffect(() => {
-    loadReports();
+    sessionStorage.removeItem("bit-shield-session");
+    let active = true;
+
+    fetch(`${API}/reports`)
+      .then((response) => {
+        if (!response.ok) throw new Error("Could not load reports.");
+        return response.json();
+      })
+      .then((data) => {
+        if (active) setReports(data);
+      })
+      .catch((error) => {
+        if (active) setMessage(error.message || "Backend unavailable. Check the backend terminal.");
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   function changePage(nextPage) {
@@ -108,6 +181,24 @@ function App() {
       setMessage(error.message);
     }
   }
+
+  const sosWidget = (
+    <aside className="sos-widget">
+      {sosActive && (
+        <div className="sos-panel" role="status" aria-live="polite">
+          <strong>Emergency call opened</strong>
+          <p>Confirm the call in your phone app.{primaryTrustedContact ? ` SOS called ${primaryTrustedContact.name}.` : " SOS is calling Campus Security."}</p>
+          {trustedContacts.slice(1).map((contact) => <a key={contact.phone} href={`tel:${contact.phone}`}>Call {contact.name}</a>)}
+          {primaryTrustedContact && <a href={`tel:${CAMPUS_SECURITY_NUMBER}`}>Call Campus Security</a>}
+          <button type="button" className="sos-panel-close" onClick={() => setSosActive(false)} aria-label="Dismiss SOS message">Close</button>
+        </div>
+      )}
+      <a className="sos-button" href={sosHref} onClick={() => setSosActive(true)}
+        aria-label={primaryTrustedContact ? `SOS: Call trusted contact ${primaryTrustedContact.name}` : "SOS: Call Campus Security"}>
+        {primaryTrustedContact ? "SOS" : "SOS - Security"}
+      </a>
+    </aside>
+  );
 
   return (
     <div className="app">
@@ -229,6 +320,30 @@ function App() {
             </section>
 
             <div id="emergency-contacts">
+              <section className="trusted-contact-setup">
+                <p className="eyebrow">SOS SETUP</p>
+                <h2>Set up trusted contacts</h2>
+                <p>Add up to three trusted people. SOS calls the first saved contact; the others are available as fallback options. If none are saved, SOS calls Campus Security.</p>
+                <form className="trusted-contact-form" onSubmit={saveTrustedContact}>
+                  {trustedContactDrafts.map((contact, index) => (
+                    <fieldset className="trusted-contact-card" key={index}>
+                      <legend>Trusted contact {index + 1}{index === 0 ? " - SOS primary" : ""}</legend>
+                      <label>Contact name
+                        <input maxLength={80} value={contact.name}
+                          onChange={(event) => setTrustedContactDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))}
+                          placeholder="e.g. Alex" />
+                      </label>
+                      <label>Phone number
+                        <input type="tel" maxLength={24} value={contact.phone}
+                          onChange={(event) => setTrustedContactDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, phone: event.target.value } : item))}
+                          placeholder="e.g. +91 98765 43210" />
+                      </label>
+                    </fieldset>
+                  ))}
+                  <button className="primary" type="submit">Save Trusted Contacts</button>
+                </form>
+                <p className="small-note">Contacts are stored only in this browser on this device. Tapping SOS opens your phone app to confirm the call.</p>
+              </section>
               <EmergencyContacts />
             </div>
             {/* Psychiatrist Section */}
@@ -313,9 +428,7 @@ function App() {
       reports from received to resolved.
     </p>
 
-    <button onClick={() => changePage("admin")}>
-      Staff Dashboard →
-    </button>
+    <button onClick={() => changePage("admin")}>Staff Dashboard →</button>
 
   </article>
 
@@ -669,6 +782,8 @@ function App() {
           </div>
         )}
       </main>
+
+      {sosWidget}
 
       <footer>
         ✳BIT Shield · Student safety through responsible innovation

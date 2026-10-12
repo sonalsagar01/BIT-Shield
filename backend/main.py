@@ -1,4 +1,5 @@
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
@@ -16,7 +17,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "https://bit-shield-gold.vercel.app"
+        "https://bit-shield-gold.vercel.app",
+        "http://192.168.29.242:5173",
     ],
     # allow_methods=["GET", "POST", "PATCH"],
     # allow_headers=["Content-Type"],
@@ -26,10 +28,15 @@ app.add_middleware(
 )
 
 
+@contextmanager
 def connect_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        with conn:
+            yield conn
+    finally:
+        conn.close()
 
 
 def init_db():
@@ -47,7 +54,6 @@ def init_db():
                 created_at TEXT NOT NULL
             )
         """)
-
         # Support databases created by the earlier prototype.
         columns = {
             row["name"]
@@ -75,7 +81,6 @@ class IncidentInput(BaseModel):
 @app.get("/")
 def home():
     return {"message": "BIT Shield API is running"}
-
 
 @app.get("/reports")
 def get_reports():

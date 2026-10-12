@@ -2,6 +2,20 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
+## BIT Shield access
+
+The app does not require login or account registration. Report submission,
+report viewing, and status updates are available without signing in. To start
+the backend in PowerShell:
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m uvicorn main:app --reload
+```
+
+Set `VITE_API_URL` when running the frontend against a non-local backend;
+development defaults to `http://127.0.0.1:8000`.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
